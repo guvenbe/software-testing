@@ -4,6 +4,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -87,5 +88,18 @@ public class Payment {
                 ", source='" + source + '\'' +
                 ", description='" + description + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Payment)) return false;
+        Payment payment = (Payment) o;
+        return getPaymentId().equals(payment.getPaymentId()) && getCustomerId().equals(payment.getCustomerId()) && getAmount().equals(payment.getAmount()) && getCurrency() == payment.getCurrency() && getSource().equals(payment.getSource()) && getDescription().equals(payment.getDescription());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getPaymentId(), getCustomerId(), getAmount(), getCurrency(), getSource(), getDescription());
     }
 }
