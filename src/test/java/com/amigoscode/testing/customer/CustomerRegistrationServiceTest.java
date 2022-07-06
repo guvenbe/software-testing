@@ -1,5 +1,6 @@
 package com.amigoscode.testing.customer;
 
+import com.amigoscode.testing.utils.PhoneNumberValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -12,11 +13,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 class CustomerRegistrationServiceTest {
@@ -24,6 +23,9 @@ class CustomerRegistrationServiceTest {
     private CustomerRegistrationService underTest;
     @Mock
     private CustomerRepository mockCustomerRepository;
+
+    @Mock
+    private PhoneNumberValidator phoneNumberValidator;
 
     @Captor
     private ArgumentCaptor<Customer> customerArgumentCaptor;
@@ -33,7 +35,7 @@ class CustomerRegistrationServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.initMocks(this);
-        underTest = new CustomerRegistrationService(mockCustomerRepository);
+        underTest = new CustomerRegistrationService(mockCustomerRepository, phoneNumberValidator);
     }
 
     @Test
@@ -47,6 +49,9 @@ class CustomerRegistrationServiceTest {
         given(mockCustomerRepository
                 .selectCustomerByPhoneNumber(phoneNumber))
                 .willReturn(Optional.empty());
+        // ... Valid phone number
+        given(phoneNumberValidator.test(phoneNumber)).willReturn(true);
+
         //When
         underTest.registerNewCustomer(request);
         //Then
@@ -68,7 +73,8 @@ class CustomerRegistrationServiceTest {
         given(mockCustomerRepository
                 .selectCustomerByPhoneNumber(phoneNumber))
                 .willReturn(Optional.of(customer));
-
+        // ... Valid phone number
+        given(phoneNumberValidator.test(phoneNumber)).willReturn(true);
         //When
         underTest.registerNewCustomer(request);
 
@@ -92,6 +98,8 @@ class CustomerRegistrationServiceTest {
         given(mockCustomerRepository
                 .selectCustomerByPhoneNumber(phoneNumber))
                 .willReturn(Optional.of(customerTwo));
+        // ... Valid phone number
+        given(phoneNumberValidator.test(phoneNumber)).willReturn(true);
         //When
 
         //Then
@@ -114,6 +122,8 @@ class CustomerRegistrationServiceTest {
         given(mockCustomerRepository
                 .selectCustomerByPhoneNumber(phoneNumber))
                 .willReturn(Optional.empty());
+        // ... Valid phone number
+        given(phoneNumberValidator.test(phoneNumber)).willReturn(true);
         //When
         underTest.registerNewCustomer(request);
         //Then
@@ -122,6 +132,26 @@ class CustomerRegistrationServiceTest {
         assertThat(customerArgumentCaptorValue)
                 .isEqualToIgnoringGivenFields(customer, "id");
         assertThat(customerArgumentCaptorValue.getId()).isNotNull();
+
+    }
+
+    @Test
+    void itShouldNotSaveNewCustomerWhenPhoneNumberIsNotValid() {
+        //Given phone number and customer
+        String phoneNumber = "000099";
+        Customer customer = new Customer(UUID.randomUUID(),"Maryam", phoneNumber);
+        // ... a request
+        CustomerRegistrationRequest request = new CustomerRegistrationRequest(customer);
+
+        // ... Valid phone number
+        given(phoneNumberValidator.test(phoneNumber)).willReturn(false);
+
+        //When
+        assertThatThrownBy(()->underTest.registerNewCustomer(request))
+                .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("Phone Number " + phoneNumber + " is not valid");
+        //Then
+        then(mockCustomerRepository).shouldHaveNoMoreInteractions();
 
     }
 }
